@@ -28,18 +28,18 @@ def print_board(solution):
 def generate_initial_candidates():
     candidates = []
     for i in range(CANDIDATE_COUNT):
-        candidate = ""
+        candidate = []
         for c in range(QUEENS):
-            candidate += str(random.randrange(0,QUEENS))
+            candidate.append(random.randrange(0,QUEENS))
         candidates.append(candidate)
     return candidates
 
 def test_fitness(candidate):
     conflicts = 0
     for i in range(QUEENS):
-        left = int(candidate[i])
+        left = candidate[i]
         for t in range(i+1,QUEENS):
-            right = int(candidate[t])
+            right = candidate[t]
             # If there are two genes on the same row: conflict
             if (left == right):
                 conflicts += 1
@@ -50,34 +50,17 @@ def test_fitness(candidate):
 
 def score_candidates(candidates):
     best_score = 0
-    best_candidate = ""
+    best_candidate = []
     score_sum = 0
     scores = {}
     for i in range(CANDIDATE_COUNT):
         score = test_fitness(candidates[i])
         score_sum += score
-        scores[candidates[i]] = score
-        if (scores[candidates[i]] > best_score):
-            best_score = scores[candidates[i]]
-            best_candidate = candidates[i]
+        scores[tuple(candidates[i])] = score
+        if (scores[tuple(candidates[i])] > best_score):
+            best_score = scores[tuple(candidates[i])]
+            best_candidate = copy.deepcopy(candidates[i])
     return scores, best_candidate, score_sum
-
-def select_candidates(scores, sum_scores):
-    next = 0
-    scores_hist = {}
-    selected_candidates = []
-    for candidate in scores:
-        p = int((scores[candidate]/sum_scores)*CANDIDATE_COUNT*10)
-        for i in range(next,next+p):
-            scores_hist[i] = candidate
-        next = next+p    
-    for q in range(0,CANDIDATE_COUNT,2):
-        new_candidate1 = scores_hist[random.randrange(0,len(scores_hist))]
-        new_candidate2 = scores_hist[random.randrange(0,len(scores_hist))]
-        new_candidate1, new_candidate2 = splice(new_candidate1, new_candidate2)
-        selected_candidates.append(new_candidate1)
-        selected_candidates.append(new_candidate2)
-    return selected_candidates
 
 def splice(candidate1, candidate2):
     splice_spot = random.randrange(0,QUEENS)
@@ -88,26 +71,38 @@ def splice(candidate1, candidate2):
 def mutate(candidate):
     for c in range(0, QUEENS):
         if (random.random() < MUTAGEN):
-            candidate = candidate[:c] + str(random.randrange(0,QUEENS)) + candidate[c+1:]
+            candidate[c] = random.randrange(0,QUEENS)
     return candidate
 
-def generate_next_generation(scores, score_sum):
+def generate_next_generation(scores, sum_scores):
+    next = 0
+    scores_hist = {}
     new_candidates = []
-    new_candidates = select_candidates(scores, score_sum)
+    for candidate in scores:
+        p = int((scores[candidate]/sum_scores)*CANDIDATE_COUNT*10)
+        for i in range(next,next+p):
+            scores_hist[i] = candidate
+        next = next+p    
+    for q in range(0,CANDIDATE_COUNT,2):
+        new_candidate1 = list(scores_hist[random.randrange(0,len(scores_hist))])
+        new_candidate2 = list(scores_hist[random.randrange(0,len(scores_hist))])
+        new_candidate1, new_candidate2 = splice(new_candidate1, new_candidate2)
+        new_candidates.append(new_candidate1)
+        new_candidates.append(new_candidate2)
     return new_candidates
 
 #f = open("candidates.txt", "a")
 #g = open("generations.csv", "a")
 generation = 0
 best_fitness = 0
-best_candidate = ""
+best_candidate = []
 candidates = generate_initial_candidates()
 
 while(True):
     generation += 1
     scores, best_candidate, score_sum = score_candidates(candidates)
 #    f.write(f"{generation}, {scores}\n")
-    best_fitness = scores[best_candidate]
+    best_fitness = scores[tuple(best_candidate)]
     if (best_fitness == BEST_FITNESS):
         break
     if (generation % REPORT_FREQUENCY == 0):
